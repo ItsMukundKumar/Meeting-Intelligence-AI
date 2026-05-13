@@ -2,6 +2,7 @@ import yt_dlp
 from pydub import AudioSegment
 import os
 import uuid
+import tempfile
 
 DOWNLOAD_DIR = "downloads"
 CHUNK_DIR = "chunks"
@@ -10,26 +11,44 @@ os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 os.makedirs(CHUNK_DIR, exist_ok=True)
 
 
+def _get_cookies_file() -> str | None:
+    """Load YouTube cookies from Streamlit secrets if available."""
+    try:
+        import streamlit as st
+        if "youtube" in st.secrets and "cookies" in st.secrets["youtube"]:
+            tmp = tempfile.NamedTemporaryFile(
+                mode="w", suffix=".txt", delete=False
+            )
+            tmp.write(st.secrets["youtube"]["cookies"])
+            tmp.close()
+            return tmp.name
+    except Exception:
+        pass
+
+    # Fallback: local cookies.txt file (for local development)
+    if os.path.exists("cookies.txt"):
+        return "cookies.txt"
+
+    return None
+
+
 def _download_yt_audio(url: str) -> str:
 
     output_template = os.path.join(DOWNLOAD_DIR, "%(id)s.%(ext)s")
 
+    cookies_file = _get_cookies_file()
+
     ydl_opts = {
-        "format": "bestaudio/best",
+        "format": "bestaudio[ext=m4a]/bestaudio/best",
         "outtmpl": output_template,
         "quiet": False,
         "no_warnings": False,
         "noplaylist": True,
-        # retries
         "retries": 10,
         "fragment_retries": 10,
         "socket_timeout": 30,
-        # stability
         "geo_bypass": True,
         "nocheckcertificate": True,
-        # IMPORTANT
-        "extractor_args": {"youtube": {"player_client": ["web"]}},
-        # browser headers
         "http_headers": {
             "User-Agent": (
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -37,7 +56,7 @@ def _download_yt_audio(url: str) -> str:
                 "Chrome/124.0 Safari/537.36"
             )
         },
-        # ffmpeg conversion
+        "extractor_args": {"youtube": {"player_client": ["web"]}},
         "postprocessors": [
             {
                 "key": "FFmpegExtractAudio",
@@ -47,15 +66,18 @@ def _download_yt_audio(url: str) -> str:
         ],
     }
 
+    # Add cookies if available
+    if cookies_file:
+        ydl_opts["cookiefile"] = cookies_file
+
     try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:  # type: ignore
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:                         # type: ignore
             info = ydl.extract_info(url, download=True)
 
             if info is None:
                 raise Exception("Failed to extract video info")
 
             video_id = info.get("id")
-
             mp3_path = os.path.join(DOWNLOAD_DIR, f"{video_id}.mp3")
 
             if not os.path.exists(mp3_path):
@@ -98,7 +120,9 @@ def _chunk_audio(wav_path: str, language: str = "en") -> list:
 
         chunk = audio[start : start + chunk_ms]
 
-        chunk_path = os.path.join(CHUNK_DIR, f"{uuid.uuid4().hex}_chunk_{i+1}.wav")
+        chunk_path = os.path.join(
+            CHUNK_DIR, f"{uuid.uuid4().hex}_chunk_{i+1}.wav"
+        )
 
         chunk.export(chunk_path, format="wav")
 
