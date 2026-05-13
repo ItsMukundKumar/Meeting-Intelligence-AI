@@ -14,7 +14,7 @@ def get_llm():
     api_key = st.secrets["API"]["MISTRAL_API_KEY"]
 
     return ChatMistralAI(
-        model_name="mistral-large-latest",
+        model_name="mistral-medium-latest",
         api_key=api_key,
         temperature=0.3,
     )  # type: ignore
