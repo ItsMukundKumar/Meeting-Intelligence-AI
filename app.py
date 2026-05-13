@@ -1,8 +1,11 @@
 import warnings
+
 warnings.filterwarnings("ignore")
 
 from transformers.utils import logging
+
 logging.set_verbosity_error()
+
 import streamlit as st
 from dotenv import load_dotenv
 import os
@@ -22,7 +25,8 @@ st.set_page_config(
 
 # ── CSS ─────────────────────────────────────────────
 
-st.markdown("""
+st.markdown(
+    """
 <style>
 
 @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600&display=swap');
@@ -73,7 +77,9 @@ html, body, [data-testid="stAppViewContainer"] {
 }
 
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 # ── Session State ───────────────────────────────────
 
@@ -83,8 +89,8 @@ if "meetings" not in st.session_state:
 if "current_meeting_id" not in st.session_state:
     st.session_state.current_meeting_id = None
 
-
 # ── Pipeline ────────────────────────────────────────
+
 
 def run_pipeline(source: str, language: str):
 
@@ -94,15 +100,9 @@ def run_pipeline(source: str, language: str):
     from core.extractor import extract_items
     from core.rag_engine import build_rag_chain
 
-    chunks = process_input(
-        source=source,
-        language=language
-    )
+    chunks = process_input(source=source, language=language)
 
-    transcript = transcribe(
-        chunks=chunks,
-        language=language
-    )
+    transcript = transcribe(chunks=chunks, language=language)
 
     summary = summarize(transcript=transcript)
 
@@ -145,24 +145,21 @@ with st.sidebar:
 
             label = f"📌 {meeting['title']}"
 
-            if st.button(
-                label,
-                key=meeting["id"],
-                use_container_width=True
-            ):
+            if st.button(label, key=meeting["id"], use_container_width=True):
                 st.session_state.current_meeting_id = meeting["id"]
                 st.rerun()
 
-
 # ── Header ──────────────────────────────────────────
 
-st.markdown("""
+st.markdown(
+    """
 <div class="main-title">
     <h1>🎙️ Meeting Intelligence</h1>
     <p>Transcribe · Summarise · Extract · Chat</p>
 </div>
-""", unsafe_allow_html=True)
-
+""",
+    unsafe_allow_html=True,
+)
 
 # ── Upload Screen ───────────────────────────────────
 
@@ -174,73 +171,64 @@ if st.session_state.current_meeting_id is None:
 
         st.markdown('<div class="block-card">', unsafe_allow_html=True)
 
-        st.markdown(
-            '<div class="small-title">Source</div>',
-            unsafe_allow_html=True
-        )
+        st.markdown('<div class="small-title">Source</div>', unsafe_allow_html=True)
+
+        st.info("""
+            YouTube URLs may not work on cloud deployments due to YouTube anti-bot restrictions.
+
+            For best results, upload the media file directly.
+            """)
 
         source_type = st.radio(
-            "Source",
-            ["YouTube URL", "Upload File"],
-            horizontal=True
+            "Source", ["Upload File", "YouTube URL"], horizontal=True
         )
 
         source = None
 
-        if source_type == "YouTube URL":
+        # ── Upload File First ─────────────────────
 
-            source = st.text_input(
-                "URL",
-                placeholder="Paste YouTube URL...",
-                label_visibility="collapsed"
-            )
-
-        else:
+        if source_type == "Upload File":
 
             uploaded_file = st.file_uploader(
                 "Upload File",
-                type=[
-                    "mp3",
-                    "wav",
-                    "mp4",
-                    "mkv",
-                    "mpeg",
-                    "webm"
-                ],
-                label_visibility="collapsed"
+                type=["mp3", "wav", "mp4", "mkv", "mpeg", "webm"],
+                label_visibility="collapsed",
             )
 
             if uploaded_file is not None:
 
                 os.makedirs("temp_uploads", exist_ok=True)
 
-                file_path = os.path.join(
-                    "temp_uploads",
-                    uploaded_file.name
-                )
+                file_path = os.path.join("temp_uploads", uploaded_file.name)
 
                 with open(file_path, "wb") as f:
                     f.write(uploaded_file.read())
 
                 source = file_path
 
-                st.success(
-                    f"Uploaded: {uploaded_file.name}"
-                )
+                st.success(f"Uploaded: {uploaded_file.name}")
+
+        # ── YouTube URL ───────────────────────────
+
+        else:
+
+            st.warning("""
+                YouTube extraction may fail on Streamlit Cloud because YouTube blocks automated requests.
+                """)
+
+            source = st.text_input(
+                "URL", placeholder="Paste YouTube URL...", label_visibility="collapsed"
+            )
+
+        # ── Language ──────────────────────────────
 
         language = st.selectbox(
             "Language",
             ["en", "hi"],
-            format_func=lambda x:
-            "🇬🇧 English"
-            if x == "en"
-            else "🇮🇳 Hindi / Hinglish"
+            format_func=lambda x: "🇬🇧 English" if x == "en" else "🇮🇳 Hindi / Hinglish",
         )
 
-        process_btn = st.button(
-            "Analyse Meeting →",
-            use_container_width=True
-        )
+        process_btn = st.button("Analyse Meeting →", use_container_width=True)
 
         st.markdown("</div>", unsafe_allow_html=True)
 
@@ -259,7 +247,7 @@ if st.session_state.current_meeting_id is None:
                     "Transcribing...",
                     "Summarising...",
                     "Extracting Insights...",
-                    "Building RAG..."
+                    "Building RAG...",
                 ]
 
                 for i, step in enumerate(steps):
@@ -268,10 +256,7 @@ if st.session_state.current_meeting_id is None:
 
                     progress.progress((i + 1) * 20)
 
-                result = run_pipeline(
-                    source=source,
-                    language=language
-                )
+                result = run_pipeline(source=source, language=language)
 
                 meeting_id = str(uuid.uuid4())
 
@@ -285,18 +270,12 @@ if st.session_state.current_meeting_id is None:
                     "open_questions": result["open_questions"],
                     "rag_chain": result["rag_chain"],
                     "chat_history": [],
-                    "created_at": datetime.now().strftime(
-                        "%d %b %Y • %I:%M %p"
-                    )
+                    "created_at": datetime.now().strftime("%d %b %Y • %I:%M %p"),
                 }
 
-                st.session_state.meetings.append(
-                    meeting_data
-                )
+                st.session_state.meetings.append(meeting_data)
 
-                st.session_state.current_meeting_id = (
-                    meeting_id
-                )
+                st.session_state.current_meeting_id = meeting_id
 
                 progress.progress(100)
 
@@ -310,9 +289,7 @@ if st.session_state.current_meeting_id is None:
 
         elif process_btn and not source:
 
-            st.warning(
-                "Please provide a source."
-            )
+            st.warning("Please provide a source.")
 
 # ── Meeting View ────────────────────────────────────
 
@@ -320,10 +297,11 @@ else:
 
     current_meeting = next(
         (
-            m for m in st.session_state.meetings
+            m
+            for m in st.session_state.meetings
             if m["id"] == st.session_state.current_meeting_id
         ),
-        None
+        None,
     )
 
     if current_meeting is None:
@@ -338,22 +316,15 @@ else:
 
         with col1:
 
-            st.markdown(
-                f"""
+            st.markdown(f"""
                 ## 📌 {current_meeting['title']}
-                """
-            )
+                """)
 
-            st.caption(
-                current_meeting["created_at"]
-            )
+            st.caption(current_meeting["created_at"])
 
         with col2:
 
-            if st.button(
-                "← Back",
-                use_container_width=True
-            ):
+            if st.button("← Back", use_container_width=True):
                 st.session_state.current_meeting_id = None
                 st.rerun()
 
@@ -361,13 +332,9 @@ else:
 
         # ── Tabs ─────────────────────────────────
 
-        tab1, tab2, tab3, tab4, tab5 = st.tabs([
-            "📋 Summary",
-            "✅ Action Items",
-            "🔑 Decisions",
-            "❓ Questions",
-            "💬 Chat"
-        ])
+        tab1, tab2, tab3, tab4, tab5 = st.tabs(
+            ["📋 Summary", "✅ Action Items", "🔑 Decisions", "❓ Questions", "💬 Chat"]
+        )
 
         # ── Summary ─────────────────────────────
 
@@ -377,49 +344,43 @@ else:
 
             with col1:
 
-                st.markdown("""
+                st.markdown(
+                    """
                 <div class="block-card">
                 <div class="small-title">
                 Summary
                 </div>
-                """, unsafe_allow_html=True)
+                """,
+                    unsafe_allow_html=True,
+                )
 
                 st.write(current_meeting["summary"])
 
-                st.markdown(
-                    "</div>",
-                    unsafe_allow_html=True
-                )
+                st.markdown("</div>", unsafe_allow_html=True)
 
             with col2:
 
-                st.markdown("""
+                st.markdown(
+                    """
                 <div class="block-card">
                 <div class="small-title">
                 Transcript Preview
                 </div>
-                """, unsafe_allow_html=True)
-
-                st.code(
-                    current_meeting["transcript"][:1200]
+                """,
+                    unsafe_allow_html=True,
                 )
 
-                st.markdown(
-                    "</div>",
-                    unsafe_allow_html=True
-                )
+                st.code(current_meeting["transcript"][:1200])
 
-                with st.expander(
-                    "View Full Transcript"
-                ):
+                st.markdown("</div>", unsafe_allow_html=True)
+
+                with st.expander("View Full Transcript"):
 
                     st.text_area(
                         "Transcript",
-                        value=current_meeting[
-                            "transcript"
-                        ],
+                        value=current_meeting["transcript"],
                         height=400,
-                        label_visibility="collapsed"
+                        label_visibility="collapsed",
                     )
 
         # ── Action Items ────────────────────────
@@ -428,19 +389,13 @@ else:
 
             if not current_meeting["action_items"]:
 
-                st.info(
-                    "No action items found."
-                )
+                st.info("No action items found.")
 
             else:
 
-                for item in current_meeting[
-                    "action_items"
-                ]:
+                for item in current_meeting["action_items"]:
 
-                    st.markdown(
-                        f"- {item}"
-                    )
+                    st.markdown(f"- {item}")
 
         # ── Decisions ───────────────────────────
 
@@ -448,74 +403,47 @@ else:
 
             if not current_meeting["decisions"]:
 
-                st.info(
-                    "No decisions found."
-                )
+                st.info("No decisions found.")
 
             else:
 
-                for item in current_meeting[
-                    "decisions"
-                ]:
+                for item in current_meeting["decisions"]:
 
-                    st.markdown(
-                        f"- {item}"
-                    )
+                    st.markdown(f"- {item}")
 
         # ── Questions ───────────────────────────
 
         with tab4:
 
-            if not current_meeting[
-                "open_questions"
-            ]:
+            if not current_meeting["open_questions"]:
 
-                st.info(
-                    "No open questions found."
-                )
+                st.info("No open questions found.")
 
             else:
 
-                for item in current_meeting[
-                    "open_questions"
-                ]:
+                for item in current_meeting["open_questions"]:
 
-                    st.markdown(
-                        f"- {item}"
-                    )
+                    st.markdown(f"- {item}")
 
         # ── Chat ────────────────────────────────
 
         with tab5:
 
-            st.markdown(
-                "### Ask Questions About Meeting"
-            )
+            st.markdown("### Ask Questions About Meeting")
 
-            # ── Existing Messages ──────────────
-
-            for msg in current_meeting[
-                "chat_history"
-            ]:
+            for msg in current_meeting["chat_history"]:
 
                 with st.chat_message(msg["role"]):
 
                     st.markdown(msg["content"])
 
-            # ── Input ─────────────────────────
-
-            question = st.chat_input(
-                "Ask about this meeting..."
-            )
+            question = st.chat_input("Ask about this meeting...")
 
             if question:
 
-                current_meeting[
-                    "chat_history"
-                ].append({
-                    "role": "user",
-                    "content": question
-                })
+                current_meeting["chat_history"].append(
+                    {"role": "user", "content": question}
+                )
 
                 with st.chat_message("user"):
 
@@ -525,17 +453,12 @@ else:
 
                     with st.spinner("Thinking..."):
 
-                        answer = current_meeting[
-                            "rag_chain"
-                        ].invoke(question)
+                        answer = current_meeting["rag_chain"].invoke(question)
 
                         st.markdown(answer)
 
-                current_meeting[
-                    "chat_history"
-                ].append({
-                    "role": "assistant",
-                    "content": answer
-                })
+                current_meeting["chat_history"].append(
+                    {"role": "assistant", "content": answer}
+                )
 
                 st.rerun()
