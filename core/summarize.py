@@ -3,19 +3,29 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.runnables import RunnablePassthrough, RunnableLambda
-
-import os
+import streamlit as st
 from dotenv import load_dotenv
 
 load_dotenv()
 
 
 def get_llm():
-    return ChatMistralAI(model_name="mistral-small-latest", api_key=os.getenv("MISTRAL_API_KEY"), temperature=0.3)  # type: ignore
+
+    api_key = st.secrets["MISTRAL_API_KEY"]
+
+    return ChatMistralAI(
+        model_name="mistral-large-latest",
+        api_key=api_key,
+        temperature=0.3,
+    )  # type: ignore
 
 
-def split_transcript(transcript: str, chunk_size : int =3000, chunk_overlap : int = 400) -> list:
-    splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+def split_transcript(
+    transcript: str, chunk_size: int = 3000, chunk_overlap: int = 400
+) -> list:
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=chunk_size, chunk_overlap=chunk_overlap
+    )
 
     return splitter.split_text(text=transcript)
 
@@ -86,21 +96,26 @@ def summarize(transcript: str) -> str:
             ("human", "Meeting summaries to combine:\n{text}"),
         ]
     )
-    
+
     combined_chain = (
-        RunnablePassthrough() | RunnableLambda(lambda x : {"text":x}) | combine_prompt | llm | StrOutputParser()
+        RunnablePassthrough()
+        | RunnableLambda(lambda x: {"text": x})
+        | combine_prompt
+        | llm
+        | StrOutputParser()
     )
 
     return combined_chain.invoke(combined)
 
-def generate_title(summary : str) -> str:
+
+def generate_title(summary: str) -> str:
     llm = get_llm()
-    
+
     title_prompt = ChatPromptTemplate.from_messages(
-    [
-        (
-            "system",
-            """You are an expert meeting analyst. Generate a concise and descriptive title for the meeting based on the transcript summary.
+        [
+            (
+                "system",
+                """You are an expert meeting analyst. Generate a concise and descriptive title for the meeting based on the transcript summary.
 
             Rules:
             - Maximum 8 words
@@ -114,13 +129,17 @@ def generate_title(summary : str) -> str:
             - Product Roadmap Planning for Mobile App Launch
             - Customer Churn Analysis and Retention Strategy Discussion
             """,
-        ),
-        ("human", "Meeting summary:\n\n{summary}\n\nGenerate a title:"),
-    ]
-)
-    
-    title_chain = (
-        RunnablePassthrough() | RunnableLambda(lambda x : {"summary":x}) | title_prompt | llm | StrOutputParser()
+            ),
+            ("human", "Meeting summary:\n\n{summary}\n\nGenerate a title:"),
+        ]
     )
-    
-    return title_chain.invoke({'summary':summary})
+
+    title_chain = (
+        RunnablePassthrough()
+        | RunnableLambda(lambda x: {"summary": x})
+        | title_prompt
+        | llm
+        | StrOutputParser()
+    )
+
+    return title_chain.invoke({"summary": summary})
