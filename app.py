@@ -178,8 +178,6 @@ if st.session_state.current_meeting_id is None:
 
             For best results, upload the media file directly.
             """)
-        st.write(st.secrets)
-        
         source_type = st.radio(
             "Source", ["Upload File", "YouTube URL"], horizontal=True
         )
