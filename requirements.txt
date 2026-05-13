@@ -1,16 +1,20 @@
 # ───────────────── UI ─────────────────
 streamlit>=1.35.0
 
-# ───────────────── LLM / LangChain ─────────────────
+# ───────────────── LangChain ─────────────────
 langchain>=0.3.0
 langchain-core>=0.3.0
 langchain-community>=0.3.0
 langchain-mistralai>=0.2.0
 langchain-huggingface>=0.1.2
 
-# ───────────────── Embeddings / Vector DB ─────────────────
+# ───────────────── Embeddings / Vector Store ─────────────────
 sentence-transformers>=3.0.0
 faiss-cpu>=1.8.0
+
+# ───────────────── Torch ─────────────────
+torch>=2.3.0
+torchvision>=0.18.0
 
 # ───────────────── Whisper / Audio ─────────────────
 faster-whisper>=1.1.0
@@ -30,5 +34,5 @@ requests>=2.32.0
 python-dotenv>=1.0.1
 numpy>=1.26.4,<2.0
 
-# ───────────────── Optional Export ─────────────────
+# ───────────────── Export ─────────────────
 fpdf2>=2.7.9
