@@ -1,3 +1,4 @@
+import re
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
@@ -19,6 +20,11 @@ def build_chain(system_prompt: str, task: str):
 
 
 def parse_extraction(llm_output: str) -> dict:
+    """
+    FIX: Old parser only handled items 1-9 (hardcoded startswith checks).
+    Now uses regex to handle any number (10, 11, 20+, etc.).
+    Also uses more robust section header detection with regex.
+    """
 
     sections = {
         "action_items": [],
@@ -27,72 +33,57 @@ def parse_extraction(llm_output: str) -> dict:
     }
 
     current_section = None
-    current_item = []
+    current_item: list[str] = []
 
-    lines = llm_output.splitlines()
+    # Regex: matches numbered list items like "1.", "12.", "100."
+    numbered_item_re = re.compile(r"^\d+\.\s")
 
-    for line in lines:
+    # Regex: matches section headers regardless of surrounding whitespace/dashes
+    section_patterns = {
+        "action_items": re.compile(r"ACTION_ITEMS\s*:", re.IGNORECASE),
+        "decisions": re.compile(r"DECISIONS\s*:", re.IGNORECASE),
+        "open_questions": re.compile(r"OPEN_QUESTIONS\s*:", re.IGNORECASE),
+    }
 
-        line = line.strip()
+    def flush_item():
+        if current_item and current_section:
+            text = "\n".join(current_item).strip()
+            if text and text.lower() != "none":
+                sections[current_section].append(text)
 
-        if not line:
+    for line in llm_output.splitlines():
+
+        stripped = line.strip()
+
+        if not stripped:
             continue
 
-        # ── Section Detection ─────────────────────
+        # ── Section Detection ─────────────────────────
 
-        if "ACTION_ITEMS:" in line:
+        matched_section = None
+        for section_key, pattern in section_patterns.items():
+            if pattern.search(stripped):
+                matched_section = section_key
+                break
 
-            if current_item and current_section:
-                sections[current_section].append("\n".join(current_item))
-                current_item = []
-
-            current_section = "action_items"
+        if matched_section:
+            flush_item()
+            current_item = []
+            current_section = matched_section
             continue
 
-        elif "DECISIONS:" in line:
+        # ── New Numbered Item ─────────────────────────
 
-            if current_item and current_section:
-                sections[current_section].append("\n".join(current_item))
-                current_item = []
-
-            current_section = "decisions"
-            continue
-
-        elif "OPEN_QUESTIONS:" in line:
-
-            if current_item and current_section:
-                sections[current_section].append("\n".join(current_item))
-                current_item = []
-
-            current_section = "open_questions"
-            continue
-
-        # ── New Numbered Item ────────────────────
-
-        if (
-            line.startswith("1.")
-            or line.startswith("2.")
-            or line.startswith("3.")
-            or line.startswith("4.")
-            or line.startswith("5.")
-            or line.startswith("6.")
-            or line.startswith("7.")
-            or line.startswith("8.")
-            or line.startswith("9.")
-        ):
-
-            if current_item and current_section:
-                sections[current_section].append("\n".join(current_item))
-
-            current_item = [line]
+        if numbered_item_re.match(stripped):
+            flush_item()
+            current_item = [stripped]
 
         else:
-            current_item.append(line)
+            # Continuation line of current item
+            current_item.append(stripped)
 
-    # ── Final Item Save ─────────────────────────
-
-    if current_item and current_section:
-        sections[current_section].append("\n".join(current_item))
+    # Flush the last item
+    flush_item()
 
     return sections
 
@@ -149,7 +140,7 @@ def extract_items(transcript: str) -> dict:
         - Do NOT mix sections
         - Be specific
         - Infer priority from urgency
-        - Keep exact section headers
+        - Keep exact section headers: ACTION_ITEMS: / DECISIONS: / OPEN_QUESTIONS:
         """,
         task="Extract all structured information from the meeting transcript",
     )
@@ -158,17 +149,15 @@ def extract_items(transcript: str) -> dict:
         system_prompt="""
         You are an expert meeting analyst.
 
-        You will receive extracted meeting information
-        from multiple transcript chunks.
+        You will receive extracted meeting information from multiple transcript chunks.
 
         Your tasks:
-
         - Merge all sections
         - Remove duplicates
         - Renumber sequentially
         - Preserve exact formatting
 
-        Required sections:
+        Required sections (use exactly these headers):
 
         ACTION_ITEMS:
         1. Task: <task>
@@ -182,13 +171,12 @@ def extract_items(transcript: str) -> dict:
         OPEN_QUESTIONS:
         1. <question>
 
-        If empty:
-        write None
+        If a section is empty write: None
         """,
         task="Merge and deduplicate extracted meeting information",
     )
 
-    # ── Split Transcript ─────────────────────────
+    # ── Split Transcript ─────────────────────────────
 
     chunks = split_transcript(
         transcript=transcript,
@@ -196,29 +184,23 @@ def extract_items(transcript: str) -> dict:
         chunk_overlap=1000,
     )
 
-    # ── Extract Per Chunk ────────────────────────
+    # ── Extract Per Chunk ────────────────────────────
 
     raw_results = []
 
     for chunk in chunks:
-
-        result = extraction_chain.invoke(
-            {"transcript": chunk}
-        )
-
+        result = extraction_chain.invoke({"transcript": chunk})
         raw_results.append(result)
 
     combined = "\n\n".join(raw_results)
 
-    # ── Single Chunk ─────────────────────────────
+    # ── Single Chunk — no dedup needed ───────────────
 
     if len(chunks) == 1:
         return parse_extraction(combined)
 
-    # ── Multi Chunk Deduplication ────────────────
+    # ── Multi Chunk — deduplicate ────────────────────
 
-    final_output = dedup_chain.invoke(
-        {"transcript": combined}
-    )
+    final_output = dedup_chain.invoke({"transcript": combined})
 
     return parse_extraction(final_output)

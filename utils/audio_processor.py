@@ -12,19 +12,20 @@ os.makedirs(CHUNK_DIR, exist_ok=True)
 
 
 def _get_cookies_file() -> str | None:
-    """Load YouTube cookies from Streamlit secrets if available."""
+    """Load YouTube cookies from Streamlit secrets (cloud) or local file (dev)."""
     try:
         import streamlit as st
-
         if "youtube" in st.secrets and "cookies" in st.secrets["youtube"]:
-            tmp = tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False)
+            tmp = tempfile.NamedTemporaryFile(
+                mode="w", suffix=".txt", delete=False
+            )
             tmp.write(st.secrets["youtube"]["cookies"])
             tmp.close()
             return tmp.name
     except Exception:
         pass
 
-    # Fallback: local cookies.txt file (for local development)
+    # Fallback: local cookies.txt for local development
     if os.path.exists("cookies.txt"):
         return "cookies.txt"
 
@@ -38,7 +39,13 @@ def _download_yt_audio(url: str) -> str:
     cookies_file = _get_cookies_file()
 
     ydl_opts = {
-        "format": "bestaudio/best",  
+        # ✅ ios + tv_embedded clients skip n-challenge JS solving (no Node.js needed)
+        "extractor_args": {
+            "youtube": {
+                "player_client": ["ios", "tv_embedded"],
+            }
+        },
+        "format": "bestaudio/best",
         "outtmpl": output_template,
         "quiet": False,
         "no_warnings": False,
@@ -55,11 +62,6 @@ def _download_yt_audio(url: str) -> str:
                 "Chrome/124.0 Safari/537.36"
             )
         },
-        "extractor_args": {
-            "youtube": {
-                "player_client": ["ios", "tv_embedded"],
-            }
-        },
         "postprocessors": [
             {
                 "key": "FFmpegExtractAudio",
@@ -69,6 +71,7 @@ def _download_yt_audio(url: str) -> str:
         ],
     }
 
+    # Add cookies only when available
     if cookies_file:
         ydl_opts["cookiefile"] = cookies_file
 
@@ -83,7 +86,7 @@ def _download_yt_audio(url: str) -> str:
             mp3_path = os.path.join(DOWNLOAD_DIR, f"{video_id}.mp3")
 
             if not os.path.exists(mp3_path):
-                raise Exception("MP3 file was not created")
+                raise Exception("MP3 file was not created after download")
 
             return mp3_path
 
@@ -97,7 +100,7 @@ def _convert_to_mono_wav(input_path: str) -> str:
 
     audio = AudioSegment.from_file(input_path)
 
-    # Whisper recommended format
+    # Whisper recommended format: 16kHz mono
     audio = audio.set_frame_rate(16000).set_channels(1)
 
     audio.export(output_path, format="wav")
@@ -109,11 +112,11 @@ def _chunk_audio(wav_path: str, language: str = "en") -> list:
 
     audio = AudioSegment.from_file(wav_path)
 
-    # Hindi → Sarvam limit
+    # Hindi → Sarvam AI 25s limit per chunk
     if language == "hi":
         chunk_ms = 25 * 1000
     else:
-        # English → Whisper
+        # English → Whisper handles up to 10 min chunks
         chunk_ms = 10 * 60 * 1000
 
     chunks = []
@@ -122,7 +125,9 @@ def _chunk_audio(wav_path: str, language: str = "en") -> list:
 
         chunk = audio[start : start + chunk_ms]
 
-        chunk_path = os.path.join(CHUNK_DIR, f"{uuid.uuid4().hex}_chunk_{i+1}.wav")
+        chunk_path = os.path.join(
+            CHUNK_DIR, f"{uuid.uuid4().hex}_chunk_{i + 1}.wav"
+        )
 
         chunk.export(chunk_path, format="wav")
 
