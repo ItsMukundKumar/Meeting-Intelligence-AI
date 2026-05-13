@@ -15,10 +15,9 @@ def _get_cookies_file() -> str | None:
     """Load YouTube cookies from Streamlit secrets if available."""
     try:
         import streamlit as st
+
         if "youtube" in st.secrets and "cookies" in st.secrets["youtube"]:
-            tmp = tempfile.NamedTemporaryFile(
-                mode="w", suffix=".txt", delete=False
-            )
+            tmp = tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False)
             tmp.write(st.secrets["youtube"]["cookies"])
             tmp.close()
             return tmp.name
@@ -39,7 +38,7 @@ def _download_yt_audio(url: str) -> str:
     cookies_file = _get_cookies_file()
 
     ydl_opts = {
-        "format": "bestaudio[ext=m4a]/bestaudio/best",
+        "format": "bestaudio/best",  
         "outtmpl": output_template,
         "quiet": False,
         "no_warnings": False,
@@ -56,7 +55,11 @@ def _download_yt_audio(url: str) -> str:
                 "Chrome/124.0 Safari/537.36"
             )
         },
-        "extractor_args": {"youtube": {"player_client": ["web"]}},
+        "extractor_args": {
+            "youtube": {
+                "player_client": ["ios", "tv_embedded"],
+            }
+        },
         "postprocessors": [
             {
                 "key": "FFmpegExtractAudio",
@@ -66,12 +69,11 @@ def _download_yt_audio(url: str) -> str:
         ],
     }
 
-    # Add cookies if available
     if cookies_file:
         ydl_opts["cookiefile"] = cookies_file
 
     try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:                         # type: ignore
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:  # type: ignore
             info = ydl.extract_info(url, download=True)
 
             if info is None:
@@ -120,9 +122,7 @@ def _chunk_audio(wav_path: str, language: str = "en") -> list:
 
         chunk = audio[start : start + chunk_ms]
 
-        chunk_path = os.path.join(
-            CHUNK_DIR, f"{uuid.uuid4().hex}_chunk_{i+1}.wav"
-        )
+        chunk_path = os.path.join(CHUNK_DIR, f"{uuid.uuid4().hex}_chunk_{i+1}.wav")
 
         chunk.export(chunk_path, format="wav")
 
