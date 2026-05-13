@@ -42,7 +42,7 @@ def _download_yt_audio(url: str) -> str:
         # ✅ ios + tv_embedded clients skip n-challenge JS solving (no Node.js needed)
         "extractor_args": {
             "youtube": {
-                "player_client": ["ios", "tv_embedded"],
+                "player_client": ["android", "ios", "tv_embedded"],
             }
         },
         "format": "bestaudio/best",
@@ -53,6 +53,8 @@ def _download_yt_audio(url: str) -> str:
         "retries": 10,
         "fragment_retries": 10,
         "socket_timeout": 30,
+        "extract_flat": False,
+        "verbose": True,
         "geo_bypass": True,
         "nocheckcertificate": True,
         "http_headers": {
