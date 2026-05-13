@@ -15,27 +15,21 @@ def _download_yt_audio(url: str) -> str:
     output_template = os.path.join(DOWNLOAD_DIR, "%(id)s.%(ext)s")
 
     ydl_opts = {
-        # Most stable format selection for Streamlit Cloud
         "format": "bestaudio/best",
-
-        # Output
         "outtmpl": output_template,
-
-        # General
         "quiet": False,
         "no_warnings": False,
         "noplaylist": True,
-
-        # Network Stability
-        "retries": 15,
-        "fragment_retries": 15,
+        # retries
+        "retries": 10,
+        "fragment_retries": 10,
         "socket_timeout": 30,
-
-        # Avoid YouTube blocking issues
+        # stability
         "geo_bypass": True,
         "nocheckcertificate": True,
-
-        # Browser headers
+        # IMPORTANT
+        "extractor_args": {"youtube": {"player_client": ["web"]}},
+        # browser headers
         "http_headers": {
             "User-Agent": (
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -43,15 +37,7 @@ def _download_yt_audio(url: str) -> str:
                 "Chrome/124.0 Safari/537.36"
             )
         },
-
-        # Force android client
-        "extractor_args": {
-            "youtube": {
-                "player_client": ["android"]
-            }
-        },
-
-        # Convert to MP3 automatically
+        # ffmpeg conversion
         "postprocessors": [
             {
                 "key": "FFmpegExtractAudio",
@@ -110,18 +96,16 @@ def _chunk_audio(wav_path: str, language: str = "en") -> list:
 
     for i, start in enumerate(range(0, len(audio), chunk_ms)):
 
-        chunk = audio[start:start + chunk_ms]
+        chunk = audio[start : start + chunk_ms]
 
-        chunk_path = os.path.join(
-            CHUNK_DIR,
-            f"{uuid.uuid4().hex}_chunk_{i+1}.wav"
-        )
+        chunk_path = os.path.join(CHUNK_DIR, f"{uuid.uuid4().hex}_chunk_{i+1}.wav")
 
         chunk.export(chunk_path, format="wav")
 
         chunks.append(chunk_path)
 
     return chunks
+
 
 def process_input(source: str, language: str = "en") -> list:
 
