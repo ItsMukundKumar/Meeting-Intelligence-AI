@@ -1,50 +1,49 @@
-# UI
+# ── UI ──────────────────────────────────────────────
 streamlit>=1.35.0
 
-# Transcription
-faster-whisper>=1.0.3
+# ── Transcription ───────────────────────────────────
+faster-whisper>=1.1.0
 groq>=0.9.0
 
-# YouTube
+# ── YouTube download ────────────────────────────────
 yt-dlp>=2026.03.17
 
-# Audio
+# ── Audio processing ────────────────────────────────
 ffmpeg-python>=0.2.0
 pydub>=0.25.1
 
-# LangChain
+# ── LangChain ───────────────────────────────────────
 langchain>=0.2.0
 langchain-community>=0.2.0
 langchain-core>=0.2.0
 langchain-text-splitters>=0.2.0
 
-# Mistral
+# ── Mistral ─────────────────────────────────────────
 langchain-mistralai>=0.1.7
 mistralai>=0.4.2
 
-# Vector DB
-chromadb==0.4.24
+# ── Vector DB ───────────────────────────────────────
+chromadb>=0.5.0
 
-# Embeddings
-sentence-transformers==2.7.0
+# ── Embeddings ──────────────────────────────────────
+sentence-transformers>=2.7.0
 langchain-huggingface>=0.0.3
 
-# HTTP
+# ── HTTP ────────────────────────────────────────────
 httpx>=0.27.0
 requests>=2.31.0
 
-# PDF
+# ── PDF Export ──────────────────────────────────────
 fpdf2>=2.7.9
 
-# Utils
+# ── Utilities ───────────────────────────────────────
 python-dotenv>=1.0.0
-numpy>=1.26.0
+numpy>=2.0.0
 
-# Torch CPU
-torch==2.2.2
-torchaudio==2.2.2
-torchvision==0.17.2
+# ── Torch ───────────────────────────────────────────
+torch>=2.5.0
+torchaudio>=2.5.0
+torchvision>=0.20.0
 
-# Compatibility
-protobuf==3.20.3
-audioop-lts>=0.2.1
+# ── Compatibility ───────────────────────────────────
+protobuf>=4.25.3
