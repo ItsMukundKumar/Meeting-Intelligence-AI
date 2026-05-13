@@ -11,7 +11,7 @@ load_dotenv()
 
 def get_llm():
 
-    api_key = st.secrets["MISTRAL_API_KEY"]
+    api_key = st.secrets["API"]["MISTRAL_API_KEY"]
 
     return ChatMistralAI(
         model_name="mistral-large-latest",
