@@ -2,17 +2,19 @@ import httpx
 import os
 from dotenv import load_dotenv
 import warnings
-
+import streamlit as st
 warnings.filterwarnings("ignore")
 
 load_dotenv()
 
 # ── Config ──────────────────────────────────────────
 
-USE_GROQ = os.getenv("USE_GROQ", "false").lower() == "true"
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-WHISPER_MODEL = os.getenv("WHISPER_MODEL", "base")
-SARVAM_API_KEY = os.getenv("SARVAM_API_KEY")
+
+USE_GROQ = st.secrets.get("USE_GROQ", "false").lower() == "true"
+GROQ_API_KEY = st.secrets.get("GROQ_API_KEY")
+WHISPER_MODEL = st.secrets.get("WHISPER_MODEL", "base")
+SARVAM_API_KEY = st.secrets.get("SARVAM_API_KEY")
+MISTRAL_API_KEY = st.secrets.get("MISTRAL_API_KEY")
 SARVAM_API_URL = "https://api.sarvam.ai/speech-to-text"
 SARVAM_TRANSLATE_URL = "https://api.sarvam.ai/translate"
 
