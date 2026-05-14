@@ -136,7 +136,7 @@ Meeting-Intelligence-AI/
 ## 1️⃣ Clone Repository
 
 ```bash
-git clone https://github.com/yourusername/meeting-intelligence-ai.git
+git clone https://github.com/ItsMukundKumar/Meeting-Intelligence-AI.git
 cd meeting-intelligence-ai
 ```
 
@@ -201,26 +201,6 @@ streamlit run app.py
 ```bash
 python main.py
 ```
-
----
-
-# 🖼️ UI Preview
-
-<div align="center">
-
-## Dashboard
-
-<img width="100%" src="https://via.placeholder.com/1200x600?text=Meeting+Intelligence+Dashboard" />
-
----
-
-## Meeting Chat
-
-<img width="100%" src="https://via.placeholder.com/1200x600?text=RAG+Meeting+Chat" />
-
-</div>
-
----
 
 # 🔄 Workflow
 
@@ -314,11 +294,11 @@ Recommended:
 ### Mukund Shah
 
 <p align="left">
-  <a href="https://github.com/yourgithub">
+  <a href="https://github.com/ItsMukundKumar/">
     <img src="https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github">
   </a>
   
-  <a href="https://linkedin.com/in/yourlinkedin">
+  <a href="https://www.linkedin.com/in/mukund-kumar-shah/">
     <img src="https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin">
   </a>
 </p>
